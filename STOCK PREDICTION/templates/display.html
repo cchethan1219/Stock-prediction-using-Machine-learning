@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Stock Predictions</title>
+    <!-- Include necessary stylesheets -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.0/chart.min.css">
+    <style>
+        .corner-text {
+            position: fixed;
+            bottom: 10px;
+            right: 10px;
+            font-size: 12px;
+            color: #888;
+        }
+    </style>
+</head>
+<body>
+    <div style="text-align: center;">
+        <h1>Predictions for <span id="stockTicker"></span></h1>
+    </div>
+    <div style="width: 80%; margin: auto;">
+        <canvas id="stockChart"></canvas>
+    </div>
+    <div class="corner-text">CREATED BY CV</div>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        function fetchPredictions() {
+            fetch('/fetch_predictions') // Replace with your Flask route to fetch predictions
+                .then(response => response.json())
+                .then(data => {
+                    // Check if predictions are available
+                    if (data && Object.keys(data).length > 0) {
+                        const ticker = Object.keys(data)[0]; // Assuming there's only one ticker for simplicity
+                        document.getElementById('stockTicker').innerText = ticker; // Set the stock ticker
+
+                        renderChart(data[ticker]);
+                    } else {
+                        setTimeout(fetchPredictions, 1000); // Retry after 1 second if predictions are not yet available
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching predictions:', error);
+                    setTimeout(fetchPredictions, 1000); // Retry after 1 second on error
+                });
+        }
+
+        function renderChart(predictions) {
+            const actualData = predictions.actual;
+            const predictedData = predictions.predicted.map(prediction => prediction[0]); // Extracting the predicted values from the nested array
+
+            // Chart.js configuration
+            const ctx = document.getElementById('stockChart').getContext('2d');
+            const stockChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: predictions.dates, // Use dates directly from predictions
+                    datasets: [{
+                        label: 'Actual Stock Price',
+                        data: actualData,
+                        borderColor: 'blue',
+                        backgroundColor: 'rgba(0, 0, 255, 0.1)',
+                        borderWidth: 1,
+                        fill: false
+                    }, {
+                        label: 'Predicted Stock Price',
+                        data: predictedData,
+                        borderColor: 'green',
+                        backgroundColor: 'rgba(0, 255, 0, 0.1)',
+                        borderWidth: 1,
+                        fill: false
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Stock Price Prediction'
+                        },
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false
+                        }
+                    },
+                    scales: {
+                        x: {
+                            display: true,
+                            title: {
+                                display: true,
+                                text: 'Time'
+                            }
+                        },
+                        y: {
+                            display: true,
+                            title: {
+                                display: true,
+                                text: 'Price'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Initiate fetching predictions on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            fetchPredictions();
+        });
+    </script>
+</body>
+</html>
